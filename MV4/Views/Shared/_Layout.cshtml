@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+<html lang="en" translate="no">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MV4</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MV4.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <div class="_nvbar">
+            <div class="_nvbar-content">
+                <a asp-action="Index">
+                    <button class="_nvbarfont" onclick="toggleNav()">Zum Ranking</button>
+                </a>
+
+                <a asp-action="Privacy">
+                    <button class="_nvbarfont-2">Songs hinzufügen</button>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <script>
+        function toggleNav() {
+            var nvbarContent = document.querySelector("._nvbar-content");
+            nvbarContent.classList.toggle("invisible");
+            var nvbar = document.querySelector("._nvbar");
+            if (nvbarContent.classList.contains("invisible")) {
+                document.body.style.overflow = "hidden";
+                document.body.style.height = "100vh";
+                nvbar.style.height = "100vh";
+                // Add loading circle
+                nvbar.innerHTML += '<div class="loading-circle"><i class="fas fa-spinner fa-spin"></i></div>';
+            } else {
+                nvbar.style.height = "calc(12vw + " + nvbarContent.scrollHeight + "px)";
+                document.body.style.overflow = "";
+                document.body.style.height = "";
+                // Remove loading circle
+                var loadingCircle = document.querySelector(".loading-circle");
+                if (loadingCircle) {
+                    loadingCircle.remove();
+                }
+            }
+            //nvbar.classList.toggle("_expand");
+        }
+    </script>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container _footer">
+            &copy; 2023 - Paul Menzlaff - Marvin Dreyer - <a href="https://igsmm-ma.de/iserv/mail/compose/X8ksk3ZjkvBuNWKudVEyqV?type=new">Support</a>
+            <img />
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

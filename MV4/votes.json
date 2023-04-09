@@ -1,0 +1,8 @@
+[
+    {
+        "trackId": "trackId",
+        "count": 0,
+        "IPs": [ "userIpAdress" ],
+        "downvoteIPs": [ "userIpAdress" ]
+    }
+]

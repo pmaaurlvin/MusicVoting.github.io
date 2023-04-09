@@ -1,0 +1,456 @@
+﻿@using Newtonsoft.Json.Linq;
+@using Newtonsoft.Json;
+@using System.Net;
+@using System.Text;
+@using System.Web;
+@using Microsoft.AspNetCore.Hosting;
+@using Microsoft.AspNetCore.Mvc;
+@using MV4.Models;
+@using MV4.Controllers;
+@using System.Net.Http.Headers;
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+
+
+@{
+    // Read the JSON file
+    string jsonFilePath = "votes.json";
+    string jsonData = System.IO.File.ReadAllText(jsonFilePath);
+    JArray votes = JArray.Parse(jsonData);
+
+    // Sort the votes array by count in descending order
+    votes = new JArray(votes.OrderByDescending(v => (int)v["count"]).ToList());
+    int i = 0;
+    bool noVotes = false;
+
+    int pnumber = 0;
+
+    //popups
+    string Upvotetxt = "Du hast schon für diesen Song gestimmt";
+    string Downvotetxt = "Du hast bereits gegen diesen Song gestimmt";
+    //string popuptxt = "Error!";
+
+}
+
+<head>
+    
+</head>
+
+
+
+
+
+<div class="_Home">
+    <div class="_hometext">
+        <h1 class="_homeh1">Abschlussball 2023</h1>
+        <h1 class="_homeh2">Musik Abstimmung</h1>
+    </div>
+    <div class="_homebutton">
+    <a asp-action="Privacy">
+        <button class="_homebtn">Songs hinzufügen</button>
+    </a>
+</div>
+</div>
+
+
+<div class="popup-windows invisible i">@Downvotetxt
+    <div class="progress-bar"></div>
+</div>
+<div class="overlay"></div>
+<div class="_popup-windows invisible i">@Upvotetxt
+    <div class="progress-bar"></div>
+</div>
+<div class="overlay"></div>
+
+
+<h1 class="resheading">RANKING</h1>
+
+<div class="xsongs">
+    <div class ="xdivnum">
+        <h1 class="listPosition">#</h1>
+    </div>
+    <div class="xdivcount">
+        <h1 class="xcount"></h1>
+    </div>
+    <div class="xdivimg">
+        <h1 class="xcover"></h1>
+        <span class="material-symbols-outlined _note">
+        music_note
+        </span>
+    </div>
+    <div class="xdivdata">
+        <h1 class="xTA">Titel, Artist</h1>
+    </div>
+    <div class="xdivbuttons">
+        <h1 class="xV">Votes</h1>
+    </div>
+</div>
+
+
+
+<table>
+    <thead>
+        
+    </thead>
+    <tbody>
+        @foreach (JObject vote in votes)   //JObject
+        {     
+            string votenum = vote["count"].ToString();
+            int votenumInt = int.Parse(votenum);
+            if (votenumInt == 0)
+            {
+                Console.WriteLine("Track has 0 votes" + votenumInt);               
+                noVotes = true;              //Stop Listing Tracks if Votes = 0
+            }
+
+            if (i < 20 && noVotes == false)   //Max Number of Displayed tracks
+            {
+                i++;
+                // Replace YOUR_CLIENT_ID and YOUR_CLIENT_SECRET with your Spotify client ID and client secret
+                var clientId = "0de4927c153046faa9c9b71dd370ea67";
+                var clientSecret = "5a2c9e210bf04e0fbe9e29ae90e463db";
+
+                // Build the request to retrieve an access token using the client credentials flow
+                var tokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
+                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+                tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+                tokenRequest.Content = new FormUrlEncodedContent(new Dictionary<string, string> {
+                { "grant_type", "client_credentials" }
+                });
+
+                // Send the token request and retrieve the access token
+                var tokenResponse = await new HttpClient().SendAsync(tokenRequest);
+                tokenResponse.EnsureSuccessStatusCode();
+                var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+                var accessToken = JObject.Parse(tokenJson)["access_token"].Value<string>();
+
+                // Replace TRACK_ID with the actual ID of the track you want to retrieve
+                var trackId = vote["trackId"];
+                var tr = vote["trackId"];   //Working
+                Console.WriteLine(tr);
+                Console.WriteLine("Votes: " + vote["count"]);
+
+                // Build the request to retrieve the track details from the Spotify API
+                var trackRequest = new HttpRequestMessage(HttpMethod.Get, $"https://api.spotify.com/v1/tracks/{trackId}");
+                trackRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                // Send the track request and retrieve the track details
+                var trackResponse = await new HttpClient().SendAsync(trackRequest);
+                trackResponse.EnsureSuccessStatusCode();
+                var trackJson = await trackResponse.Content.ReadAsStringAsync();
+                var track = JObject.Parse(trackJson);
+
+                // Extract the cover image, track name, and artist from the track details
+                var coverImage = track["album"]["images"][1]["url"].Value
+                <string>();
+                var trackName = track["name"].Value<string>();
+                //var artist = track["artists"][0]["name"].Value<string>();
+                string artist = string.Join(", ", track["artists"].Select(a => a["name"].Value<string>()));
+                var previewUrl = track["preview_url"];
+
+              
+                pnumber++;
+                Console.WriteLine("loop  " + pnumber);
+                //<h1>@trackName</h1>
+                //<h2>@artist</h2>
+                //<h1 class="count">@vote["count"]</h1>
+                <div class="songs">
+                    <div class="divnum">
+                        <h1 class="pnumber">@pnumber.</h1>
+                    </div>
+                    <div class="divcount">
+                        <h1 class="count" id="count-@trackId">@vote["count"]</h1>
+                    </div>
+                    <div class="divimg">
+                        <img src="@coverImage" onclick="playPreview('@previewUrl')" alt="@trackName by @artist" style="width: 14vw; height: 14vw;" />
+                        <span class="material-symbols-rounded" onclick="playPreview('@previewUrl', '@trackId')" id="play-@trackId">
+                            play_arrow
+                        </span>
+                        <span class="material-symbols-rounded invisible" onclick="playPreview('@previewUrl', '@trackId')" id="pause-@trackId">
+                            pause
+                        </span>
+                    </div>
+                    <div class="divdata">
+                        <a>
+                            <h1 class="trackName">@trackName</h1>
+                        </a>
+                        <span>
+                            <h2 class="artist">@artist</h2>
+                        </span>
+                    </div>
+                    <div class="divbuttons">  
+                        <div>
+                            <button class="UPvotebtn" id="voteButton-@trackId" onclick="sendVote('@trackId')">
+                                <span class="material-symbols-outlined">
+                                    thumb_up
+                                </span>
+                            </button>                            
+                        </div>
+                        <div>
+                            <button class="DOWNvotebtn" id="downvoteButton-@trackId" onclick="sendDownVote('@trackId')">
+                                <span class="material-symbols-outlined">
+                                    thumb_down
+                                </span>
+                            </button>
+                        </div>
+                        
+                        
+                    </div>
+                    
+                </div>                
+                
+            }
+        }
+    </tbody>
+</table>
+
+
+@section scripts
+{
+    <script>
+        var $button;
+        var $Dbutton;
+        var reject = false;
+        var double = false;
+        var doubledown = false;
+        var doubleup = false;
+        var rejectdislike = false;
+        var rejectlike= false;
+        var Excptn = false;
+        var _c = false;      
+
+        //UPVOTE
+        function sendVote(trackId) {
+            console.log("upcalled");
+            $button = $('#voteButton-' + trackId);
+            $Dbutton = $('#downvoteButton-' + trackId);
+        $.ajax({
+            type: 'POST',
+                url: '/Votes/SaveVotes?trackId=${encodeURIComponent(trackId)}',
+                data: { trackId: trackId },
+            success: function (result) {
+                // Handle the success response from the server
+                    if (result.voteAdded && $button && $button.hasClass('voted') && Excptn == true){
+                        console.log("W");
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount + 1);
+                        _c = false;
+                        console.log(_c + "catch");
+
+                    }
+                    else if (reject == true)     //REJECT DOWN
+                    {
+                        reject = false;
+                        console.log("reject or double");
+                    }
+                    /*else if (result.voteAdded && $Dbutton && $Dbutton.hasClass('downvoted'))    //DOUBLE UP
+                    {                                        
+                        console.log("double up");
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount + 2);
+                        $button.addClass('voted');
+                        $Dbutton.removeClass('downvoted');
+                        reject = true;
+                        sendVote(trackId);      //;??
+                    }*/
+                    else if (result.voteAdded && $button && !$button.hasClass('voted'))     //SINGLE UP
+                    {
+                        $button.addClass('voted');
+                        if ($Dbutton && $Dbutton.hasClass('downvoted')){
+                            $Dbutton.removeClass('downvoted')
+                        }
+                        
+                        console.log("single up");
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount + 1);
+
+                        Excptn = true;
+                        _c = true;
+                        sendVote(trackId);
+                        //$Dbutton.removeClass('downvoted');
+                    }
+                    else if (_c == true){
+                        console.log("catch");
+                        _c = false;
+                    }
+                    else if ($button && $button.hasClass('voted'))      //REJECT UP
+                    {
+                        reject = true;
+                        $button.removeClass('voted');
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount - 1);
+                        console.log("-1 | rej. = true");
+                        // Call the sendVote function here
+                        
+                        sendDownVote(trackId);
+                      
+                    }
+                    
+                    else{
+                        console.log("user already voted this track");
+
+                        $('._popup-windows').removeClass('invisible').addClass('active').removeClass('i');
+                        $('.progress-bar').addClass('active');
+                        setTimeout(function () {
+                            $('._popup-windows').removeClass('active').addClass('invisible').addClass('i');
+                            $('.progress-bar').removeClass('active');
+                            console.log('Timeout');
+                        }, 3000);
+                    }
+            },
+            error: function (xhr, status, error) {
+                // Handle the error response from the server
+            }
+        });
+        }
+
+
+        function sendDownVote(trackId) {
+            console.log("dcalled");
+            $Dbutton = $('#downvoteButton-' + trackId);
+            $button = $('#voteButton-' + trackId);
+        $.ajax({
+            type: 'POST',
+                url: '/Votes/downVotes?trackId=${encodeURIComponent(trackId)}',
+                data: { trackId: trackId },
+            success: function (result) {
+                // Handle the success response from the server
+                    if (result._VoteAdded && $Dbutton && $Dbutton.hasClass('downvoted') && Excptn == true){
+                        console.log("W-d");
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount - 1);
+                        _c = false;
+                        console.log(_c + "catch");
+
+                    }
+                    else if (reject == true)     //REJECT UP
+                    {
+                        reject = false;
+                        console.log("reject or double");
+                    }
+                    /*else if (result._VoteAdded && reject == false && $button && $button.hasClass('voted'))  //DOUBLE DOWN
+                    {                                        
+                        console.log("double down");
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount - 2);
+                        $Dbutton.addClass('downvoted');
+                        $button.removeClass('voted');
+                        reject = true;
+                        sendDownVote(trackId);
+
+                    }*/
+                    else if (result._VoteAdded && $Dbutton && !$Dbutton.hasClass('downvoted'))      //SINGLE DOWN
+                    {
+                        $Dbutton.addClass('downvoted');
+                        if ($button && $button.hasClass('voted')){
+                            $button.removeClass('voted');
+                        }
+                        
+                        console.log("single down");
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount - 1);
+
+                        Excptn = true;
+                        _c = true;
+                        sendDownVote(trackId);                       
+                    }
+                    else if (_c == true) {
+                        console.log("catch");
+                        _c = false;
+                    }
+                    else if ($Dbutton && $Dbutton.hasClass('downvoted'))    //REJECT DOWN
+                    {
+                        $Dbutton.removeClass('downvoted');
+                        var countElement = $('#count-' + trackId);
+                        var currentCount = parseInt(countElement.text());
+                        countElement.text(currentCount + 1);
+                        // Call the sendVote function here
+                        reject = true;
+                        sendVote(trackId);
+                        console.log("+1 | rej. = true");
+                        
+                    }
+                    
+                    else {
+                        console.log("user already downvoted this track");
+            
+                        $('.popup-windows').removeClass('invisible').addClass('active').removeClass('i');
+                        $('.progress-bar').addClass('active');
+                        setTimeout(function () {
+                            $('.popup-windows').removeClass('active').addClass('invisible').addClass('i');
+                            $('.progress-bar').removeClass('active');
+                            console.log('Timeout');
+                        }, 3000);
+                    }
+            },
+            error: function (xhr, status, error) {
+                // Handle the error response from the server
+            }
+        });
+        }
+        
+    </script>
+    <script>
+        let currentAudio;
+        var $play;
+        var $pause;
+        var switched = false;
+        var $last_play;
+        var $last_pause;
+
+        function playPreview(url, trackId) {
+            $last_play = $play;
+            $last_pause = $pause;
+            $play = document.querySelector(`#play-${trackId}`);
+            $pause = document.querySelector(`#pause-${trackId}`);
+
+            if (currentAudio && currentAudio.src === url) {
+                if (currentAudio.paused) {
+                    currentAudio.play();
+                    $play.classList.add('invisible');
+                    $pause.classList.remove('invisible');
+                } else {
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                    $play.classList.remove('invisible');
+                    $pause.classList.add('invisible');
+                }
+            } else {
+                if (currentAudio) {                    
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                    console.log("switched");
+                    $last_play.classList.remove('invisible');
+                    $last_pause.classList.add('invisible');
+
+
+                }
+                currentAudio = new Audio(url);
+                currentAudio.volume = 0.45;
+                currentAudio.play();
+                $play.classList.add('invisible');
+                $pause.classList.remove('invisible');
+                currentAudio.addEventListener('ended', function() {
+                    $play.classList.remove('invisible');
+                    $pause.classList.add('invisible');
+                });
+            }
+        }
+    </script>
+}
+
